@@ -1,12 +1,15 @@
+const { response } = require('express');
 const express = require('express');
 const router = express.Router();
 const pool = require('../database');
-router.get('/add', (req, res) => {
+const { isLoggedIn } = require('../lib/auth');
+
+router.get('/add', isLoggedIn, (req, res) => {
     console.log('en el get');
     res.render('links/add');
 });
 
-router.post('/add', (req, res) => {
+router.post('/add', isLoggedIn, async(req, res) => {
     const { title, url, description } = req.body;
 
     console.log(req.body);
@@ -14,7 +17,8 @@ router.post('/add', (req, res) => {
     const newLink = {
         title,
         url,
-        description
+        description,
+        user_id: req.user.id
     };
     //wait pool.query('insert into links set ?', [newLink]);
 
@@ -24,16 +28,45 @@ router.post('/add', (req, res) => {
     );
     if (title !== null && title !== undefined) {
         console.log("el titulo es diferente de nulo");
-        pool.query('insert into links set ?', [newLink], function(err, rows, fields) {
-                if (err) throw err;
-                console.log("error en el insert"); //Show 1
-            }
+        await pool.query('insert into links set ?', [newLink]);
+        req.flash('success', 'Link guardado correctamente');
 
-        )
+
     };
 
+    res.redirect('/list');
+});
+
+router.get('/list', isLoggedIn, async(req, res) => {
+    const links = await pool.query('select * from links where user_id = ?', [req.user.id]);
+    console.log("los links son: " + links);
+    res.render('links/list', { links });
+});
+//eliminar
+router.get('/delete/:id', isLoggedIn, async(req, res) => {
+    const { id } = req.params;
+    await pool.query('delete from links where id = ?', [id]);
+    req.flash('success', 'Link eliminado correctamente');
+    res.redirect('/list');
+});
+//editar 
+router.get('/edit/:id', isLoggedIn, async(req, res) => {
+    const { id } = req.params;
+    const links = await pool.query('select * from links where id = ?', [id]);
+    res.render('links/edit', { link: links[0] });
+});
+//
+router.post('/edit/:id', isLoggedIn, async(req, res) => {
+    const { id } = req.params;
+    const { title, description, url } = req.body;
+    console.log("el id es:" + id + " el titulo es: " + title);
+    const newLink = { title, description, url };
+    console.log(newLink);
+    await pool.query('update links set  ? where id = ?', [newLink, id]);
+    req.flash('success', 'Link actualizado correctamente');
+    res.redirect('/list');
+
+});
 
 
-    res.send('recibido');
-})
 module.exports = router;

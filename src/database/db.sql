@@ -7,7 +7,7 @@ create table users(
     fullname varchar(100) not null
     );
     alter table users 
-     add primary key (id);
+     add primary key (id); 
     alter table users 
       modify id int(11) not null auto_increment, auto_increment = 1;
 
